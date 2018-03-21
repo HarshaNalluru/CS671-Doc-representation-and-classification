@@ -80,14 +80,14 @@ d2v_reviews = []
 for i in range(len(Z)):
 	d2v_reviews.append(TaggedDocument(words=Z[i][0], tags=['REV_'+str(i)]))
 
-# print(d2v_reviews[25])
+print(d2v_reviews[25])
 
 vec_size = 100
 d2v_model = Doc2Vec(d2v_reviews,size=vec_size)
 
-# print(d2v_model.docvecs['REV_3'])
+print(d2v_model.docvecs['REV_3'])
 
-# print(len(d2v_model.docvecs))
+print(len(d2v_model.docvecs))
 
 
 X_train = []
@@ -126,23 +126,46 @@ accuracy(y_test, predicted)
 ################################################################################################
 
 
-# model = Sequential()
-# model.add(LSTM(4, input_shape=(1, look_back)))
-# model.add(Dense(1))
-# model.compile(loss='mean_squared_error', optimizer='adam')
-# model.fit(X_train, y_train, epochs=100, batch_size=1, verbose=2)
+################################################################################################
+
+# print(type(np.array(X_train)))
+# print(y_test)
+y_train = to_categorical(y_train, num_classes=2)
+y_test = to_categorical(y_test, num_classes=2)
+model = Sequential()
+model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=100))
+model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
+
+sgd = SGD(lr=0.01)
+model.compile(loss="binary_crossentropy", optimizer=sgd,
+	metrics=["accuracy"])
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+print("[INFO] evaluating on testing set...")
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+	batch_size=128, verbose=1)
+print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+	accuracy * 100))
 
 
-# trainPredict = model.predict(trainX)
-# testPredict = model.predict(testX)
-# # invert predictions
-# trainPredict = scaler.inverse_transform(trainPredict)
-# trainY = scaler.inverse_transform([trainY])
-# testPredict = scaler.inverse_transform(testPredict)
-# testY = scaler.inverse_transform([testY])
-# # calculate root mean squared error
-# trainScore = math.sqrt(mean_squared_error(trainY[0], trainPredict[:,0]))
-# print('Train Score: %.2f RMSE' % (trainScore))
-# testScore = math.sqrt(mean_squared_error(testY[0], testPredict[:,0]))
-# print('Test Score: %.2f RMSE' % (testScore))
+################################################################################################
 
+model = Sequential()
+model.add(Embedding(max_features = 100, output_dim=2))
+model.add(LSTM(128))
+model.add(Dropout(0.5))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy',
+              optimizer='rmsprop',
+              metrics=['accuracy'])
+
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+print("[INFO] evaluating on testing set...")
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+	batch_size=128, verbose=1)
+print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+	accuracy * 100))

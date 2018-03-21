@@ -7,12 +7,14 @@ from sklearn.svm import SVC
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import GaussianNB
 from sklearn.naive_bayes import BernoulliNB
+from sklearn.linear_model import LogisticRegression
 
 from keras.models import Sequential
 from keras.layers import Activation
 from keras.optimizers import SGD
-from keras.layers import Dense
-from keras.utils import np_utils
+from keras.layers import Dense, Dropout, Embedding
+from keras.utils import np_utils, to_categorical
+from keras.layers import LSTM
 
 
 def accuracy(Y_test, predicted):
@@ -48,8 +50,8 @@ for filename in os.listdir(inpath+"pos"):
 	# print(matches)
 	X.append(matches)
 	i = i + 1
-	if i > 200:
-		break
+	# if i > 50:
+	# 	break
 
 for filename in os.listdir(inpath+"neg"):
 	data = open(inpath+"neg/"+filename, 'r').read()
@@ -62,8 +64,8 @@ for filename in os.listdir(inpath+"neg"):
 	# 	print(match)
 	X.append(matches)
 	i = i + 1
-	if i > 400:
-		break
+	# if i > 100:
+	# 	break
 
 print("Loaded data")
 
@@ -86,8 +88,9 @@ for i in range(len(Z)):
 
 # print(d2v_reviews[25])
 
-vec_size = 100
-d2v_model = Doc2Vec(d2v_reviews,size=vec_size)
+vec_size = 200
+d2v_model = Doc2Vec(d2v_reviews,vector_size=vec_size, epochs = 20,window=8,workers=4)
+# d2v_model = Doc2Vec(d2v_reviews,vector_size=vec_size)
 
 # print(d2v_model.docvecs['REV_3_2'])
 
@@ -99,9 +102,12 @@ y_train = []
 
 for i in range(len(data_train)):
 	curr_vec = np.zeros((vec_size,), dtype=np.float)
+	count = 0
 	for j in range(len(Z[i][0])):
 		curr_vec += d2v_model.docvecs['REV_'+str(i)+ '_' + str(j)]
-
+		count+=1
+	if count:
+		curr_vec /= count
 	X_train.append(curr_vec)
 	y_train.append(Z[i][1])
 	# if i == 5:
@@ -114,8 +120,12 @@ X_test = []
 y_test = []
 for i in range(len(data_test)):
 	curr_vec = np.zeros((vec_size,), dtype=np.float)
+	count = 0
 	for j in range(len(Z[i + int(0.8*len(Z))][0])):
 		curr_vec += d2v_model.docvecs['REV_'+str(i + int(0.8*len(Z)))+ '_' + str(j)]
+		count+=1
+	if count:
+		curr_vec /= count
 	X_test.append(curr_vec)
 	y_test.append(Z[i + int(0.8*len(Z))][1])
 	# if i == 5:
@@ -150,27 +160,53 @@ predicted = clf.predict(X_test)
 accuracy(y_test, predicted)
 
 
+
+clf = LogisticRegression().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+accuracy(y_test, predicted)
+
+
 ################################################################################################
 
-
+# print(type(np.array(X_train)))
+# print(y_test)
+y_train = to_categorical(y_train, num_classes=2)
+y_test = to_categorical(y_test, num_classes=2)
 model = Sequential()
-model.add(Dense(100, input_dim=100, init="uniform",
-	activation="relu"))
-model.add(Dense(50, init="uniform", activation="relu"))
-model.add(Dense(2))
-model.add(Activation("softmax"))
+model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=100))
+model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
 
 sgd = SGD(lr=0.01)
 model.compile(loss="binary_crossentropy", optimizer=sgd,
 	metrics=["accuracy"])
-model.fit(X_train, y_train, nb_epoch=50, batch_size=128)
-
-predicted = model.predict(X_test, y_test)
-accuracy(y_test, predicted)
-
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 
 print("[INFO] evaluating on testing set...")
-(loss, accuracy) = model.evaluate(X_test, y_test,
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+	batch_size=128, verbose=1)
+print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+	accuracy * 100))
+
+
+################################################################################################
+
+model = Sequential()
+model.add(Embedding(max_features = 200, output_dim=2))
+model.add(LSTM(128))
+model.add(Dropout(0.5))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy',
+              optimizer='rmsprop',
+              metrics=['accuracy'])
+
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+print("[INFO] evaluating on testing set...")
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
