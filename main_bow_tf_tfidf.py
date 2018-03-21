@@ -9,6 +9,15 @@ from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 
+from keras.models import Sequential
+from keras.layers import Activation
+from keras.optimizers import SGD
+from keras.layers import Dense, Dropout, Embedding
+from keras.utils import np_utils, to_categorical
+from keras.layers import LSTM
+
+
+
 def accuracy(y_test, predicted):
 	j = 0
 	correct = 0

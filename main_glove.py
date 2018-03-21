@@ -11,6 +11,13 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import GaussianNB
 
+from keras.models import Sequential
+from keras.layers import Activation
+from keras.optimizers import SGD
+from keras.layers import Dense, Dropout, Embedding
+from keras.utils import np_utils, to_categorical
+from keras.layers import LSTM
+
 
 def accuracy(Y_test, predicted):
 	j = 0
@@ -126,6 +133,24 @@ def create_word_vector(l,size):
 		vector /= count
 	return vector
 
+def create_word_vector_tfidf(l,size):
+	vector = np.zeros(size).reshape((1,size))
+	count = 0.
+	for word in l:
+		try:
+			vector += glove_model[word].reshape((1, size)) * tfidf[word]
+			count+=1
+		except KeyError:
+			continue
+
+	if count!=0:
+		vector /= count
+	return vector
+
+################################################################################################
+######################################   Word2Vec - TF  ########################################
+################################################################################################
+
 
 X_train = []
 y_train = []
@@ -152,58 +177,43 @@ for i in range(len(data_test)):
 	y_test.append(Z[i+int(0.8*len(reviews))][1])
 
 
+## BernoulliNB  ##############################################################################
+
 clf = BernoulliNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
+print("Word2Vec - TF BernoulliNB")
 accuracy(y_test, predicted)
 
+## GaussianNB  ##############################################################################
 
 clf = GaussianNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
+print("Word2Vec - TF GaussianNB")
 accuracy(y_test, predicted)
 
+## Support Vector Machines #####################################################################
 
 clf = SVC().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
+print("Word2Vec - TF SVM")
+accuracy(y_test, predicted)
+
+## LogisticRegression ##########################################################################
+
+clf = LogisticRegression().fit(X_train, y_train)
+
+predicted = clf.predict(X_test)
+print(" Word2Vec - TF LogisticRegression")
 accuracy(y_test, predicted)
 
 
-# clf = MultinomialNB().fit(X_train,y_train)
-
-# predicted = clf.predict(X_test)
-# accuracy(y_test, predicted)
-
-
-################################################################################################
-
-# print(type(np.array(X_train)))
-# print(y_test)
-y_train = to_categorical(y_train, num_classes=2)
-y_test = to_categorical(y_test, num_classes=2)
-model = Sequential()
-model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=100))
-model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
-model.add(Dropout(0.5))
-model.add(Dense(2, activation='softmax'))
-
-sgd = SGD(lr=0.01)
-model.compile(loss="binary_crossentropy", optimizer=sgd,
-	metrics=["accuracy"])
-model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
-
-print("[INFO] evaluating on testing set...")
-(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
-	batch_size=128, verbose=1)
-print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
-	accuracy * 100))
-
-
-################################################################################################
+## LSTM ##############################################################################################
 
 model = Sequential()
-model.add(Embedding(max_features = 100, output_dim=2))
+model.add(Embedding(input_dim = len(X_train[0]), output_dim=2, input_length=None ))
 model.add(LSTM(128))
 model.add(Dropout(0.5))
 model.add(Dense(1, activation='sigmoid'))
@@ -217,5 +227,155 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
+print(" TF-IDF LSTM")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
+
+
+## Feed Norward Neural Network #################################################################
+
+# print(type(np.array(X_train)))
+# print(y_test)
+y_train = to_categorical(y_train, num_classes=2)
+y_test = to_categorical(y_test, num_classes=2)
+model = Sequential()
+model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=len(X_train[0])))
+model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
+
+sgd = SGD(lr=0.01)
+model.compile(loss="binary_crossentropy", optimizer=sgd,
+	metrics=["accuracy"])
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+print("[INFO] evaluating on testing set...")
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+	batch_size=128, verbose=1)
+print(" TF-IDF feed forward neural network")
+print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+	accuracy * 100))
+
+
+
+################################################################################################
+######################################   END  ##################################################
+################################################################################################
+
+
+
+################################################################################################
+######################################   Word2Vec - TFIDF  #####################################
+################################################################################################
+
+
+X_train = []
+y_train = []
+
+data_train = Z[:int(0.8*len(reviews))]
+
+data_test = Z[int(0.8*len(reviews)):]
+
+for i in range(len(data_train)):
+	converted_review = create_word_vector_tfidf(Z[i][0],n_dim)
+	if i==1:
+		print(converted_review[0][0])
+	X_train.append(converted_review[0])
+	y_train.append(Z[i][1])
+
+
+
+X_test = []
+y_test = []
+
+for i in range(len(data_test)):
+	converted_review = create_word_vector_tfidf(Z[i+int(0.8*len(reviews))][0],n_dim)
+	X_test.append(converted_review[0])
+	y_test.append(Z[i+int(0.8*len(reviews))][1])
+
+
+
+## BernoulliNB  ##############################################################################
+
+clf = BernoulliNB().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+print("Word2Vec - TF-IDF BernoulliNB")
+accuracy(y_test, predicted)
+
+## GaussianNB  ##############################################################################
+
+clf = GaussianNB().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+print("Word2Vec - TF-IDF GaussianNB")
+accuracy(y_test, predicted)
+
+## Support Vector Machines #####################################################################
+
+clf = SVC().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+print("Word2Vec - TF-IDF SVM")
+accuracy(y_test, predicted)
+
+## LogisticRegression ##########################################################################
+
+clf = LogisticRegression().fit(X_train, y_train)
+
+predicted = clf.predict(X_test)
+print(" Word2Vec - TF-IDF LogisticRegression")
+accuracy(y_test, predicted)
+
+
+## LSTM ##############################################################################################
+
+model = Sequential()
+model.add(Embedding(input_dim = len(X_train[0]), output_dim=2, input_length=None ))
+model.add(LSTM(128))
+model.add(Dropout(0.5))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy',
+              optimizer='rmsprop',
+              metrics=['accuracy'])
+
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+print("[INFO] evaluating on testing set...")
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+	batch_size=128, verbose=1)
+print(" Word2Vec - TF-IDF LSTM")
+print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+	accuracy * 100))
+
+
+## Feed Norward Neural Network #################################################################
+
+# print(type(np.array(X_train)))
+# print(y_test)
+y_train = to_categorical(y_train, num_classes=2)
+y_test = to_categorical(y_test, num_classes=2)
+model = Sequential()
+model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=len(X_train[0])))
+model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
+
+sgd = SGD(lr=0.01)
+model.compile(loss="binary_crossentropy", optimizer=sgd,
+	metrics=["accuracy"])
+model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+print("[INFO] evaluating on testing set...")
+(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+	batch_size=128, verbose=1)
+print(" Word2Vec - TF-IDF feed forward neural network")
+print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+	accuracy * 100))
+
+
+
+################################################################################################
+######################################   END  ##################################################
+################################################################################################

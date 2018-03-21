@@ -9,6 +9,14 @@ from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 
+from keras.models import Sequential
+from keras.layers import Activation
+from keras.optimizers import SGD
+from keras.layers import Dense, Dropout, Embedding
+from keras.utils import np_utils, to_categorical
+from keras.layers import LSTM
+
+
 def accuracy(y_test, predicted):
 	j = 0
 	correct = 0
@@ -68,43 +76,14 @@ Y = data['label']
 X_train, y_train = X[:int(.8*Y.shape[0])], Y[:int(.8*Y.shape[0])]
 X_test, y_test = X[int(.8*Y.shape[0]):], Y[int(.8*Y.shape[0]):]
 
-################################################################################################
-######################################    BOW    ###############################################
-################################################################################################
-
-## MultinomialNB  ##############################################################################
-
 count_vect = CountVectorizer()
 X_train_counts = count_vect.fit_transform(X_train)
-clf = MultinomialNB().fit(X_train_counts, y_train)
+
+normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
+X_train = normalized_tf_transformer.transform(X_train_counts)
 
 X_test_counts = count_vect.transform(X_test)
-predicted = clf.predict(X_test_counts)
-print(" BOW MultinomialNB")
-accuracy(y_test, predicted)
-
-## LogisticRegression ##########################################################################
-
-count_vect = CountVectorizer()
-X_train_counts = count_vect.fit_transform(X_train)
-clf = LogisticRegression().fit(X_train_counts, y_train)
-
-X_test_counts = count_vect.transform(X_test)
-predicted = clf.predict(X_test_counts)
-print(" BOW LogisticRegression")
-accuracy(y_test, predicted)
-
-## Support Vector Machines #####################################################################
-
-count_vect = CountVectorizer()
-X_train_counts = count_vect.fit_transform(X_train)
-clf = svm.SVC().fit(X_train_counts, y_train)
-
-X_test_counts = count_vect.transform(X_test)
-predicted = clf.predict(X_test_counts)
-print(" BOW SVM")
-accuracy(y_test, predicted)
-
+X_test = normalized_tf_transformer.transform(X_test_counts)
 
 ################################################################################################
 ######################################    TF   #################################################
@@ -112,97 +91,38 @@ accuracy(y_test, predicted)
 
 ## MultinomialNB  ##############################################################################
 
-normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
-X_train_tf = normalized_tf_transformer.transform(X_train_counts)
-clf = MultinomialNB().fit(X_train_tf, y_train)
+clf = MultinomialNB().fit(X_train, y_train)
 
-X_test_counts = count_vect.transform(X_test)
-X_new_tfidf = normalized_tf_transformer.transform(X_test_counts)
-predicted = clf.predict(X_new_tfidf)
+predicted = clf.predict(X_test)
 print(" TF MultinomialNB")
 accuracy(y_test, predicted)
 
 ## LogisticRegression ##########################################################################
 
-normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
-X_train_tf = normalized_tf_transformer.transform(X_train_counts)
-clf = LogisticRegression().fit(X_train_tf, y_train)
+clf = LogisticRegression().fit(X_train, y_train)
 
-X_test_counts = count_vect.transform(X_test)
-X_new_tfidf = normalized_tf_transformer.transform(X_test_counts)
-predicted = clf.predict(X_new_tfidf)
+predicted = clf.predict(X_test)
 print(" TF LogisticRegression")
 accuracy(y_test, predicted)
 
 ## Support Vector Machines #####################################################################
 
-normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
-X_train_tf = normalized_tf_transformer.transform(X_train_counts)
-clf = svm.SVC().fit(X_train_tf, y_train)
+clf = svm.SVC().fit(X_train, y_train)
 
-X_test_counts = count_vect.transform(X_test)
-X_new_tfidf = normalized_tf_transformer.transform(X_test_counts)
-predicted = clf.predict(X_new_tfidf)
+predicted = clf.predict(X_test)
 print(" TF SVM")
 accuracy(y_test, predicted)
 
 
 
-################################################################################################
-######################################   TF-IDF  ###############################################
-################################################################################################
-
-## MultinomialNB  ##############################################################################
-
-tfidf_transformer = TfidfTransformer()
-X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
-clf = MultinomialNB().fit(X_train_tfidf, y_train)
-
-X_test_counts = count_vect.transform(X_test)
-X_new_tfidf = tfidf_transformer.transform(X_test_counts)
-predicted = clf.predict(X_new_tfidf)
-print(" TF-IDF MultinomialNB")
-accuracy(y_test, predicted)
-
-## LogisticRegression ##########################################################################
-
-tfidf_transformer = TfidfTransformer()
-X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
-clf = LogisticRegression().fit(X_train_tfidf, y_train)
-
-X_test_counts = count_vect.transform(X_test)
-X_new_tfidf = tfidf_transformer.transform(X_test_counts)
-predicted = clf.predict(X_new_tfidf)
-print(" TF-IDF LogisticRegression")
-accuracy(y_test, predicted)
-
-## Support Vector Machines #####################################################################
-
-tfidf_transformer = TfidfTransformer()
-X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
-clf = svm.SVC().fit(X_train_tfidf, y_train)
-
-X_test_counts = count_vect.transform(X_test)
-X_new_tfidf = tfidf_transformer.transform(X_test_counts)
-predicted = clf.predict(X_new_tfidf)
-print(" TF-IDF SVM")
-accuracy(y_test, predicted)
-
-
-################################################################################################
-######################################   END  ##################################################
-################################################################################################
-
-
-
-################################################################################################
+## Feed Norward Neural Network ##############################################################################################
 
 # print(type(np.array(X_train)))
 # print(y_test)
 y_train = to_categorical(y_train, num_classes=2)
 y_test = to_categorical(y_test, num_classes=2)
 model = Sequential()
-model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=100))
+model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=len(X_train[0])))
 model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
 model.add(Dropout(0.5))
 model.add(Dense(2, activation='softmax'))
@@ -215,14 +135,15 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
+print(" TF feed forward neural network")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
 
 
-################################################################################################
+## LSTM ##############################################################################################
 
 model = Sequential()
-model.add(Embedding(max_features, output_dim=2))
+model.add(Embedding(max_features = len(X_train[0]), output_dim=2))
 model.add(LSTM(128))
 model.add(Dropout(0.5))
 model.add(Dense(1, activation='sigmoid'))
@@ -236,5 +157,13 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
+print(" TF LSTM")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
+
+
+
+################################################################################################
+######################################   END  ##################################################
+################################################################################################
+
