@@ -1,0 +1,176 @@
+import numpy as np
+import pandas as pd
+import re,os
+import itertools
+import operator
+import gensim
+from gensim.models import Word2Vec
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import SVC
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
+
+
+def accuracy(Y_test, predicted):
+	j = 0
+	correct = 0
+	for i in Y_test:
+		if i == predicted[j]:
+			# print("True")
+			correct += 1
+		j += 1
+		# print(j)
+	print("Accuracy = "+ str(1.0*correct/len(predicted)))
+
+inpath = "aclImdb/train/"
+
+index = []
+text = []
+rating = []
+
+print("Hello")
+pattern = re.compile(r"\b\w\w*\b")
+
+i = 0
+X = []
+for filename in os.listdir(inpath+"pos"):
+	data = open(inpath+"pos/"+filename, 'r').read()
+	index.append(i)
+	text.append(data)
+	rating.append("1")
+
+	matches = pattern.findall(data)
+	# for match in matches:
+	#	 print(match)
+	# print(matches)
+	X.append(matches)
+	i = i + 1
+	# if i > 200:
+	# 	break
+
+for filename in os.listdir(inpath+"neg"):
+	data = open(inpath+"neg/"+filename, 'r').read()
+	index.append(i)
+	text.append(data)
+	rating.append("0")
+
+	matches = pattern.findall(data)
+	# for match in matches:
+	#	 print(match)
+	X.append(matches)
+	i = i + 1
+	# if i > 400:
+	# 	break
+
+print("Loaded data")
+
+
+y = rating[:]
+X, y = np.array(X), np.array(y)
+
+
+Z = zip(X,y)
+np.random.shuffle(Z)
+
+reviews = X[:]
+
+
+n_dim = 200
+
+def loadGloveModel(gloveFile):
+	print "Loading Glove Model"
+	f = open(gloveFile,'r')
+	Glove_model = {}
+	for line in f:
+		splitLine = line.split()
+		word = splitLine[0]
+		embedding = np.array([float(val) for val in splitLine[1:]])
+		Glove_model[word] = embedding
+	print "Done.",len(Glove_model)," words loaded!"
+	return Glove_model
+
+glove_model = loadGloveModel("glove.6B.200d.txt")
+
+linked_reviews = list(itertools.chain.from_iterable(reviews))
+
+vocab_freq = dict()
+
+
+for word in linked_reviews:
+	if word not in vocab_freq:
+		vocab_freq[word] = 1
+	else:
+		vocab_freq[word] += 1
+
+# print(len(vocab_freq))
+
+sorted_vocab_freq = list(reversed(sorted(vocab_freq.items(), key=operator.itemgetter(1))))
+
+
+vectorizer = TfidfVectorizer(analyzer=lambda x: x, min_df=10)
+matrix = vectorizer.fit_transform(reviews)
+tfidf = dict(zip(vectorizer.get_feature_names(), vectorizer.idf_))
+
+def create_word_vector(l,size):
+	vector = np.zeros(size).reshape((1,size))
+	count = 0.
+	for word in l:
+		try:
+			vector += glove_model[word].reshape((1, size)) * tfidf[word]
+			count+=1
+		except KeyError:
+			continue
+
+	if count!=0:
+		vector /= count
+	return vector
+
+
+X_train = []
+y_train = []
+
+data_train = Z[:int(0.8*len(reviews))]
+
+data_test = Z[int(0.8*len(reviews)):]
+
+for i in range(len(data_train)):
+	converted_review = create_word_vector(Z[i][0],n_dim)
+	if i==1:
+		print(converted_review[0][0])
+	X_train.append(converted_review[0])
+	y_train.append(Z[i][1])
+
+
+
+X_test = []
+y_test = []
+
+for i in range(len(data_test)):
+	converted_review = create_word_vector(Z[i+int(0.8*len(reviews))][0],n_dim)
+	X_test.append(converted_review[0])
+	y_test.append(Z[i+int(0.8*len(reviews))][1])
+
+
+clf = BernoulliNB().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+accuracy(y_test, predicted)
+
+
+clf = GaussianNB().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+accuracy(y_test, predicted)
+
+
+clf = SVC().fit(X_train,y_train)
+
+predicted = clf.predict(X_test)
+accuracy(y_test, predicted)
+
+
+# clf = MultinomialNB().fit(X_train,y_train)
+
+# predicted = clf.predict(X_test)
+# accuracy(y_test, predicted)
