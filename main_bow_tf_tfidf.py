@@ -6,6 +6,8 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.linear_model import LogisticRegression
+from sklearn import svm
 
 def accuracy(Y_test, predicted):
 	j = 0
@@ -15,7 +17,7 @@ def accuracy(Y_test, predicted):
 			# print("True")
 			correct += 1
 		j += 1
-	print("Accuracy = ", 1.0*correct/len(predicted))
+	print("Accuracy = " + str(1.0*correct/len(predicted)))
 
 
 index = []
@@ -33,8 +35,8 @@ for filename in os.listdir(inpath+"pos"):
 	text.append(data)
 	rating.append("1")
 	i = i + 1
-	if i > 2000:
-		break
+	# if i > 2000:
+	# 	break
 
 for filename in os.listdir(inpath+"neg"):
 	data = open(inpath+"neg/"+filename, 'r').read()
@@ -42,8 +44,8 @@ for filename in os.listdir(inpath+"neg"):
 	text.append(data)
 	rating.append("0")
 	i = i + 1
-	if i > 4000:
-		break
+	# if i > 4000:
+	# 	break
 
 
 
@@ -58,7 +60,7 @@ df = pd.DataFrame(data = Dataset, columns=['index', 'document', 'label'])
 df.to_csv(outpath+name, index=False, header=True)
 
 
-data = pd.read_csv(name,header=0, encoding = 'ISO-8859-1')
+data = pd.read_csv(name,header=0)
 X = data['document']
 Y = data['label']
 
@@ -67,6 +69,10 @@ X_train, Y_train = X[:int(.8*Y.shape[0])], Y[:int(.8*Y.shape[0])]
 X_test, Y_test = X[int(.8*Y.shape[0]):], Y[int(.8*Y.shape[0]):]
 
 ################################################################################################
+######################################    BOW    ###############################################
+################################################################################################
+
+## MultinomialNB  ##############################################################################
 
 count_vect = CountVectorizer()
 X_train_counts = count_vect.fit_transform(X_train)
@@ -74,9 +80,37 @@ clf = MultinomialNB().fit(X_train_counts, Y_train)
 
 X_test_counts = count_vect.transform(X_test)
 predicted = clf.predict(X_test_counts)
+print(" BOW MultinomialNB")
 accuracy(Y_test, predicted)
 
+## LogisticRegression ##########################################################################
+
+count_vect = CountVectorizer()
+X_train_counts = count_vect.fit_transform(X_train)
+clf = LogisticRegression().fit(X_train_counts, Y_train)
+
+X_test_counts = count_vect.transform(X_test)
+predicted = clf.predict(X_test_counts)
+print(" BOW LogisticRegression")
+accuracy(Y_test, predicted)
+
+## Support Vector Machines #####################################################################
+
+count_vect = CountVectorizer()
+X_train_counts = count_vect.fit_transform(X_train)
+clf = svm.SVC().fit(X_train_counts, Y_train)
+
+X_test_counts = count_vect.transform(X_test)
+predicted = clf.predict(X_test_counts)
+print(" BOW SVM")
+accuracy(Y_test, predicted)
+
+
 ################################################################################################
+######################################    TF   #################################################
+################################################################################################
+
+## MultinomialNB  ##############################################################################
 
 normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
 X_train_tf = normalized_tf_transformer.transform(X_train_counts)
@@ -85,9 +119,40 @@ clf = MultinomialNB().fit(X_train_tf, Y_train)
 X_test_counts = count_vect.transform(X_test)
 X_new_tfidf = normalized_tf_transformer.transform(X_test_counts)
 predicted = clf.predict(X_new_tfidf)
+print(" TF MultinomialNB")
 accuracy(Y_test, predicted)
 
+## LogisticRegression ##########################################################################
+
+normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
+X_train_tf = normalized_tf_transformer.transform(X_train_counts)
+clf = LogisticRegression().fit(X_train_tf, Y_train)
+
+X_test_counts = count_vect.transform(X_test)
+X_new_tfidf = normalized_tf_transformer.transform(X_test_counts)
+predicted = clf.predict(X_new_tfidf)
+print(" TF LogisticRegression")
+accuracy(Y_test, predicted)
+
+## Support Vector Machines #####################################################################
+
+normalized_tf_transformer = TfidfTransformer(use_idf=False).fit(X_train_counts)
+X_train_tf = normalized_tf_transformer.transform(X_train_counts)
+clf = LogisticRegression().fit(X_train_tf, Y_train)
+
+X_test_counts = count_vect.transform(X_test)
+X_new_tfidf = normalized_tf_transformer.transform(X_test_counts)
+predicted = clf.predict(X_new_tfidf)
+print(" TF SVM")
+accuracy(Y_test, predicted)
+
+
+
 ################################################################################################
+######################################   TF-IDF  ###############################################
+################################################################################################
+
+## MultinomialNB  ##############################################################################
 
 tfidf_transformer = TfidfTransformer()
 X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
@@ -96,7 +161,54 @@ clf = MultinomialNB().fit(X_train_tfidf, Y_train)
 X_test_counts = count_vect.transform(X_test)
 X_new_tfidf = tfidf_transformer.transform(X_test_counts)
 predicted = clf.predict(X_new_tfidf)
+print(" TF-IDF MultinomialNB")
 accuracy(Y_test, predicted)
+
+## LogisticRegression ##########################################################################
+
+tfidf_transformer = TfidfTransformer()
+X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
+clf = MultinomialNB().fit(X_train_tfidf, Y_train)
+
+X_test_counts = count_vect.transform(X_test)
+X_new_tfidf = tfidf_transformer.transform(X_test_counts)
+predicted = clf.predict(X_new_tfidf)
+print(" TF-IDF LogisticRegression")
+accuracy(Y_test, predicted)
+
+## Support Vector Machines #####################################################################
+
+tfidf_transformer = TfidfTransformer()
+X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
+clf = MultinomialNB().fit(X_train_tfidf, Y_train)
+
+X_test_counts = count_vect.transform(X_test)
+X_new_tfidf = tfidf_transformer.transform(X_test_counts)
+predicted = clf.predict(X_new_tfidf)
+print(" TF-IDF SVM")
+accuracy(Y_test, predicted)
+
+
+################################################################################################
+######################################   END  ##################################################
+################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # X_new_tfidf[0] = (X_new_tfidf[0] + X_new_tfidf[1])/2
 # predicted = clf.predict(X_new_tfidf[0])
