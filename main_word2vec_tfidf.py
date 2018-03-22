@@ -1,13 +1,17 @@
 import numpy as np
 import pandas as pd
 import re,os
+import itertools
+import operator
 import gensim
-from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from gensim.models import Word2Vec
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
+from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import GaussianNB
-from sklearn.naive_bayes import BernoulliNB
 from sklearn.linear_model import LogisticRegression
+
 
 from keras.models import Sequential
 from keras.layers import Activation
@@ -15,6 +19,7 @@ from keras.optimizers import SGD
 from keras.layers import Dense, Dropout, Embedding
 from keras.utils import np_utils, to_categorical
 from keras.layers import LSTM
+
 
 
 def accuracy(Y_test, predicted):
@@ -25,6 +30,7 @@ def accuracy(Y_test, predicted):
 			# print("True")
 			correct += 1
 		j += 1
+		# print(j)
 	print("Accuracy = "+ str(1.0*correct/len(predicted)))
 
 inpath = "aclImdb/train/"
@@ -34,8 +40,8 @@ text = []
 rating = []
 
 print("Hello")
-# pattern = re.compile(r"\b\w\w*\b")
-pattern = re.compile(r'([A-Z][^\.!?]*[\.!?])')
+pattern = re.compile(r"\b\w\w*\b")
+
 i = 0
 X = []
 for filename in os.listdir(inpath+"pos"):
@@ -46,12 +52,12 @@ for filename in os.listdir(inpath+"pos"):
 
 	matches = pattern.findall(data)
 	# for match in matches:
-	# 	print(match)
+	#	 print(match)
 	# print(matches)
 	X.append(matches)
 	i = i + 1
-	if i > 50:
-		break
+	# if i > 200:
+	# 	break
 
 for filename in os.listdir(inpath+"neg"):
 	data = open(inpath+"neg/"+filename, 'r').read()
@@ -61,137 +67,152 @@ for filename in os.listdir(inpath+"neg"):
 
 	matches = pattern.findall(data)
 	# for match in matches:
-	# 	print(match)
+	#	 print(match)
 	X.append(matches)
 	i = i + 1
-	if i > 100:
-		break
+	# if i > 400:
+	# 	break
 
 print("Loaded data")
+
 
 y = rating[:]
 X, y = np.array(X), np.array(y)
 
+
 Z = zip(X,y)
 np.random.shuffle(Z)
 
-data_train = Z[:int(0.8*len(Z))]
-
-data_test = Z[int(0.8*len(Z)):]
+reviews = X[:]
 
 
-d2v_reviews = []
+n_dim = 50
 
-for i in range(len(Z)):
-	for j in range(len(Z[i][0])):
-		d2v_reviews.append(TaggedDocument(words=Z[i][0][j], tags=['REV_'+str(i)+ '_' + str(j)]))
+w2v_model = Word2Vec(reviews,min_count=3,size=n_dim)
 
-# print(d2v_reviews[25])
 
-vec_size = 200
-# d2v_model = Doc2Vec(d2v_reviews,vector_size=vec_size, epochs = 20,window=8,workers=4)
-d2v_model = Doc2Vec(d2v_reviews,vector_size=vec_size)
+linked_reviews = list(itertools.chain.from_iterable(reviews))
 
-# print(d2v_model.docvecs['REV_3_2'])
+vocab_freq = dict()
 
-# print(len(d2v_model.docvecs))
+
+for word in linked_reviews:
+	if word not in vocab_freq:
+		vocab_freq[word] = 1
+	else:
+		vocab_freq[word] += 1
+
+# print(len(vocab_freq))
+
+sorted_vocab_freq = list(reversed(sorted(vocab_freq.items(), key=operator.itemgetter(1))))
+
+
+vectorizer = TfidfVectorizer(analyzer=lambda x: x, min_df=10)
+matrix = vectorizer.fit_transform(reviews)
+tfidf = dict(zip(vectorizer.get_feature_names(), vectorizer.idf_))
+
+
+def create_word_vector_tfidf(l,size):
+	vector = np.zeros(size).reshape((1,size))
+	count = 0.
+	for word in l:
+		try:
+			vector += w2v_model[word].reshape((1, size)) * tfidf[word]
+			count+=1
+		except KeyError:
+			continue
+
+	if count!=0:
+		vector /= count
+	return vector
+
+
+
+################################################################################################
+######################################   Word2Vec - TFIDF  #####################################
+################################################################################################
 
 
 X_train = []
 y_train = []
 
+data_train = Z[:int(0.8*len(reviews))]
+
+data_test = Z[int(0.8*len(reviews)):]
+
 for i in range(len(data_train)):
-	curr_vec = np.zeros((vec_size,), dtype=np.float)
-	count = 0
-	for j in range(len(Z[i][0])):
-		curr_vec += d2v_model.docvecs['REV_'+str(i)+ '_' + str(j)]
-		count+=1
-	if count:
-		curr_vec /= count
-	X_train.append(curr_vec)
+	converted_review = create_word_vector_tfidf(Z[i][0],n_dim)
+	# if i==1:
+	# 	print(converted_review[0][0])
+	X_train.append(converted_review[0])
 	y_train.append(Z[i][1])
-	# if i == 5:
-	# 	print(curr_vec)
+
 
 
 X_test = []
 y_test = []
+
 for i in range(len(data_test)):
-	curr_vec = np.zeros((vec_size,), dtype=np.float)
-	count = 0
-	for j in range(len(Z[i + int(0.8*len(Z))][0])):
-		curr_vec += d2v_model.docvecs['REV_'+str(i + int(0.8*len(Z)))+ '_' + str(j)]
-		count+=1
-	if count:
-		curr_vec /= count
-	X_test.append(curr_vec)
-	y_test.append(Z[i + int(0.8*len(Z))][1])
-	# if i == 5:
-	# 	print(X_test[i])
-
-################################################################################################
-######################################   Avg Sen2Vec  ########################################
-################################################################################################
-
+	converted_review = create_word_vector_tfidf(Z[i+int(0.8*len(reviews))][0],n_dim)
+	X_test.append(converted_review[0])
+	y_test.append(Z[i+int(0.8*len(reviews))][1])
 
 ## BernoulliNB  ##############################################################################
 
 clf = BernoulliNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Avg Sen2Vec - BernoulliNB")
-accuracy(y_test, predicted)
+print("Word2Vec - TF-IDF BernoulliNB")
+accuracy(y_test, np.array(predicted))
 
 ## GaussianNB  ##############################################################################
 
 clf = GaussianNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Avg Sen2Vec - GaussianNB")
+print("Word2Vec - TF-IDF GaussianNB")
 accuracy(y_test, predicted)
 
 ## Support Vector Machines #####################################################################
 
-clf = SVC()
-clf = clf.fit(X_train,y_train)
+clf = SVC().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Avg Sen2Vec - SVM")
+print("Word2Vec - TF-IDF SVM")
 accuracy(y_test, predicted)
 
 ## LogisticRegression ##########################################################################
 
-clf = LogisticRegression().fit(X_train,y_train)
+clf = LogisticRegression().fit(X_train, y_train)
 
 predicted = clf.predict(X_test)
-print(" Avg Sen2Vec - LogisticRegression")
+print(" Word2Vec - TF-IDF LogisticRegression")
 accuracy(y_test, predicted)
 
-## LSTM ########################################################################################
 
-model = Sequential()
-model.add(Embedding(input_dim = len(X_train[0]), output_dim=2, input_length=None ))
-model.add(LSTM(128))
-model.add(Dropout(0.5))
-model.add(Dense(1, activation='sigmoid'))
+## LSTM ##############################################################################################
 
-model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
-              metrics=['accuracy'])
+# model = Sequential()
+# model.add(Embedding(input_dim = len(X_train[0]), output_dim=2, input_length=None ))
+# model.add(LSTM(128))
+# model.add(Dropout(0.5))
+# model.add(Dense(1, activation='sigmoid'))
 
-model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+# model.compile(loss='binary_crossentropy',
+#               optimizer='rmsprop',
+#               metrics=['accuracy'])
 
-print("[INFO] evaluating on testing set...")
-(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
-	batch_size=128, verbose=1)
-print(" Avg Sen2Vec LSTM")
-print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
-	accuracy * 100))
+# model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 
+# print("[INFO] evaluating on testing set...")
+# (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+# 	batch_size=128, verbose=1)
+# print("Word2Vec - TF-IDF LSTM")
+# print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+# 	accuracy * 100))
 
 
 ## Feed Norward Neural Network #################################################################
-
 
 # print(type(np.array(X_train)))
 # print(y_test)
@@ -211,25 +232,13 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
-print(" Avg Sen2Vec feed forward neural network")
+print("Word2Vec - TF-IDF feed forward neural network")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
+
 
 
 ################################################################################################
 ######################################   END  ##################################################
 ################################################################################################
-################################################################################################
-
-
-
-
-
-
-
-# clf = MultinomialNB().fit(X_train,y_train)
-
-# predicted = clf.predict(X_test)
-# accuracy(y_test, predicted)
-
 

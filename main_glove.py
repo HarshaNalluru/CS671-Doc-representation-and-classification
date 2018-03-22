@@ -10,6 +10,7 @@ from sklearn.svm import SVC
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LogisticRegression
 
 from keras.models import Sequential
 from keras.layers import Activation
@@ -53,8 +54,8 @@ for filename in os.listdir(inpath+"pos"):
 	# print(matches)
 	X.append(matches)
 	i = i + 1
-	# if i > 200:
-	# 	break
+	if i > 50:
+		break
 
 for filename in os.listdir(inpath+"neg"):
 	data = open(inpath+"neg/"+filename, 'r').read()
@@ -67,8 +68,8 @@ for filename in os.listdir(inpath+"neg"):
 	#	 print(match)
 	X.append(matches)
 	i = i + 1
-	# if i > 400:
-	# 	break
+	if i > 100:
+		break
 
 print("Loaded data")
 
@@ -148,7 +149,7 @@ def create_word_vector_tfidf(l,size):
 	return vector
 
 ################################################################################################
-######################################   Word2Vec - TF  ########################################
+######################################   GloVe - Mean ########################################
 ################################################################################################
 
 
@@ -182,7 +183,7 @@ for i in range(len(data_test)):
 clf = BernoulliNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Word2Vec - TF BernoulliNB")
+print("GloVe - TF BernoulliNB")
 accuracy(y_test, predicted)
 
 ## GaussianNB  ##############################################################################
@@ -190,7 +191,7 @@ accuracy(y_test, predicted)
 clf = GaussianNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Word2Vec - TF GaussianNB")
+print("GloVe - TF GaussianNB")
 accuracy(y_test, predicted)
 
 ## Support Vector Machines #####################################################################
@@ -198,7 +199,7 @@ accuracy(y_test, predicted)
 clf = SVC().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Word2Vec - TF SVM")
+print("GloVe - TF SVM")
 accuracy(y_test, predicted)
 
 ## LogisticRegression ##########################################################################
@@ -206,30 +207,30 @@ accuracy(y_test, predicted)
 clf = LogisticRegression().fit(X_train, y_train)
 
 predicted = clf.predict(X_test)
-print(" Word2Vec - TF LogisticRegression")
+print(" GloVe - TF LogisticRegression")
 accuracy(y_test, predicted)
 
 
 ## LSTM ##############################################################################################
 
-model = Sequential()
-model.add(Embedding(input_dim = len(X_train[0]), output_dim=2, input_length=None ))
-model.add(LSTM(128))
-model.add(Dropout(0.5))
-model.add(Dense(1, activation='sigmoid'))
+# model = Sequential()
+# model.add(Embedding(input_dim = len(X_train[0]), output_dim=2, input_length=None ))
+# model.add(LSTM(128))
+# model.add(Dropout(0.5))
+# model.add(Dense(1, activation='sigmoid'))
 
-model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
-              metrics=['accuracy'])
+# model.compile(loss='binary_crossentropy',
+#               optimizer='rmsprop',
+#               metrics=['accuracy'])
 
-model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+# model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 
-print("[INFO] evaluating on testing set...")
-(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
-	batch_size=128, verbose=1)
-print(" TF-IDF LSTM")
-print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
-	accuracy * 100))
+# print("[INFO] evaluating on testing set...")
+# (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+# 	batch_size=128, verbose=1)
+# print(" Glove LSTM")
+# print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+# 	accuracy * 100))
 
 
 ## Feed Norward Neural Network #################################################################
@@ -252,7 +253,7 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
-print(" TF-IDF feed forward neural network")
+print(" Glove feed forward neural network")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
 
@@ -265,7 +266,7 @@ print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 
 
 ################################################################################################
-######################################   Word2Vec - TFIDF  #####################################
+######################################   GloVe - TFIDF  #####################################
 ################################################################################################
 
 
@@ -300,7 +301,7 @@ for i in range(len(data_test)):
 clf = BernoulliNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Word2Vec - TF-IDF BernoulliNB")
+print("GloVe - TF-IDF BernoulliNB")
 accuracy(y_test, predicted)
 
 ## GaussianNB  ##############################################################################
@@ -308,7 +309,7 @@ accuracy(y_test, predicted)
 clf = GaussianNB().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Word2Vec - TF-IDF GaussianNB")
+print("GloVe - TF-IDF GaussianNB")
 accuracy(y_test, predicted)
 
 ## Support Vector Machines #####################################################################
@@ -316,7 +317,7 @@ accuracy(y_test, predicted)
 clf = SVC().fit(X_train,y_train)
 
 predicted = clf.predict(X_test)
-print("Word2Vec - TF-IDF SVM")
+print("GloVe - TF-IDF SVM")
 accuracy(y_test, predicted)
 
 ## LogisticRegression ##########################################################################
@@ -324,7 +325,7 @@ accuracy(y_test, predicted)
 clf = LogisticRegression().fit(X_train, y_train)
 
 predicted = clf.predict(X_test)
-print(" Word2Vec - TF-IDF LogisticRegression")
+print(" GloVe - TF-IDF LogisticRegression")
 accuracy(y_test, predicted)
 
 
@@ -345,7 +346,7 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
-print(" Word2Vec - TF-IDF LSTM")
+print(" GloVe - TF-IDF LSTM")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
 
@@ -370,7 +371,7 @@ model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 print("[INFO] evaluating on testing set...")
 (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
 	batch_size=128, verbose=1)
-print(" Word2Vec - TF-IDF feed forward neural network")
+print(" GloVe - TF-IDF feed forward neural network")
 print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
 	accuracy * 100))
 

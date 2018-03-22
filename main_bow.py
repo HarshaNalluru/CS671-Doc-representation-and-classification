@@ -44,8 +44,8 @@ for filename in os.listdir(inpath+"pos"):
 	text.append(data)
 	rating.append("1")
 	i = i + 1
-	if i > 50:
-		break
+	# if i > 50:
+	# 	break
 
 for filename in os.listdir(inpath+"neg"):
 	data = open(inpath+"neg/"+filename, 'r').read()
@@ -53,8 +53,8 @@ for filename in os.listdir(inpath+"neg"):
 	text.append(data)
 	rating.append("0")
 	i = i + 1
-	if i > 100:
-		break
+	# if i > 100:
+	# 	break
 
 
 
@@ -110,52 +110,54 @@ accuracy(y_test, predicted)
 
 
 
+## LSTM ##############################################################################################
+
+# model = Sequential()
+# # model.add(Embedding(max_features = 100, output_dim=2))
+# model.add(Embedding(input_dim = X_train[0].get_shape()[0], output_dim=2, input_length=None ))
+# model.add(LSTM(128))
+# model.add(Dropout(0.5))
+# model.add(Dense(1, activation='sigmoid'))
+
+# model.compile(loss='binary_crossentropy',
+#               optimizer='rmsprop',
+#               metrics=['accuracy'])
+
+# model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+
+# print("[INFO] evaluating on testing set...")
+# (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+# 	batch_size=128, verbose=1)
+# print(" BOW LSTM")
+# print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+# 	accuracy * 100))
+
+
+
 ## Feed Norward Neural Network ##############################################################################################
 
 # print(type(np.array(X_train)))
 # print(y_test)
-y_train = to_categorical(y_train, num_classes=2)
-y_test = to_categorical(y_test, num_classes=2)
-model = Sequential()
-model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=100))
-model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
-model.add(Dropout(0.5))
-model.add(Dense(2, activation='softmax'))
+# y_train = to_categorical(y_train, num_classes=2)
+# y_test = to_categorical(y_test, num_classes=2)
+# model = Sequential()
+# print(X_train[0].get_shape()[0])
+# model.add(Dense(100, activation="relu", kernel_initializer="uniform", input_dim=X_train[0].get_shape()[0]))
+# model.add(Dense(50, activation="relu", kernel_initializer="uniform"))
+# model.add(Dropout(0.5))
+# model.add(Dense(2, activation='softmax'))
 
-sgd = SGD(lr=0.01)
-model.compile(loss="binary_crossentropy", optimizer=sgd,
-	metrics=["accuracy"])
-model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
+# sgd = SGD(lr=0.01)
+# model.compile(loss="binary_crossentropy", optimizer=sgd,
+# 	metrics=["accuracy"])
+# model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
 
-print("[INFO] evaluating on testing set...")
-(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
-	batch_size=128, verbose=1)
-print(" BOW feed forward neural network")
-print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
-	accuracy * 100))
-
-
-## LSTM ##############################################################################################
-
-model = Sequential()
-model.add(Embedding(max_features = 100, output_dim=2))
-model.add(LSTM(128))
-model.add(Dropout(0.5))
-model.add(Dense(1, activation='sigmoid'))
-
-model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
-              metrics=['accuracy'])
-
-model.fit(np.array(X_train), np.array(y_train), epochs=50, batch_size=128)
-
-print("[INFO] evaluating on testing set...")
-(loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
-	batch_size=128, verbose=1)
-print(" BOW LSTM")
-print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
-	accuracy * 100))
-
+# print("[INFO] evaluating on testing set...")
+# (loss, accuracy) = model.evaluate(np.array(X_test), np.array(y_test),
+# 	batch_size=128, verbose=1)
+# print(" BOW feed forward neural network")
+# print("[INFO] loss={:.4f}, accuracy: {:.4f}%".format(loss,
+# 	accuracy * 100))
 
 
 ################################################################################################
