@@ -1,0 +1,4 @@
+Bow, tf, idf  - Neural nets not working
+word2vec_tfidf - LSTM not working
+glove_mean - LSTM not working
+glove_tfidf - LSTM not working
