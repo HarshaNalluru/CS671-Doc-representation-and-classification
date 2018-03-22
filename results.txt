@@ -1,0 +1,62 @@
+ BOW MultinomialNB
+Accuracy = 0.8468
+ BOW LogisticRegression
+Accuracy = 0.8802
+ BOW SVM
+Accuracy = 0.7386
+
+ TF MultinomialNB
+Accuracy = 0.851
+ TF LogisticRegression
+Accuracy = 0.8636
+ TF SVM
+Accuracy = 0.4996
+
+ TF-IDF MultinomialNB
+Accuracy = 0.8612
+ TF-IDF LogisticRegression
+Accuracy = 0.8898
+ TF-IDF SVM
+Accuracy = 0.4996
+
+---------------------------------------------------------------------
+
+SEN2VEC
+
+SVC
+GaussianNB
+BernoulliNB
+LogisticRegression
+Accuracy = 0.4954
+Accuracy = 0.5706
+Accuracy = 0.5588
+Accuracy = 0.5914
+
+SVC
+GaussianNB
+BernoulliNB
+LogisticRegression
+Accuracy = 0.5688
+Accuracy = 0.5712
+Accuracy = 0.5798
+Accuracy = 0.6178
+
+SVC
+GaussianNB
+BernoulliNB
+LogisticRegression
+Feed Forward NN
+Accuracy = 0.5804
+Accuracy = 0.5722
+Accuracy = 0.5846
+Accuracy = 0.5988
+57.2000%
+
+---------------------------------------------------------------------
+
+
+DOC2VEC SVM = 0.786
+DOC2VEC GaussianNB = 0.6248
+DOC2VEC BernoulliNB = 0.718
+
+---------------------------------------------------------------------
